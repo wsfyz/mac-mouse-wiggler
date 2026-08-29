@@ -13,6 +13,7 @@ mkdir -p "$MACOS_DIR"
   -fobjc-arc \
   -O2 \
   -framework AppKit \
+  -framework ApplicationServices \
   -framework CoreGraphics \
   "$SCRIPT_DIR/MouseWiggler.m" \
   -o "$MACOS_DIR/MouseWiggler"
@@ -23,7 +24,7 @@ mkdir -p "$MACOS_DIR"
 /usr/bin/plutil -insert CFBundleIdentifier -string "local.mouse-wiggler.helper" "$CONTENTS_DIR/Info.plist"
 /usr/bin/plutil -insert CFBundleExecutable -string "MouseWiggler" "$CONTENTS_DIR/Info.plist"
 /usr/bin/plutil -insert CFBundlePackageType -string "APPL" "$CONTENTS_DIR/Info.plist"
-/usr/bin/plutil -insert CFBundleShortVersionString -string "1.0" "$CONTENTS_DIR/Info.plist"
+/usr/bin/plutil -insert CFBundleShortVersionString -string "1.1" "$CONTENTS_DIR/Info.plist"
 /usr/bin/plutil -insert LSUIElement -bool true "$CONTENTS_DIR/Info.plist"
 /usr/bin/plutil -insert NSHighResolutionCapable -bool true "$CONTENTS_DIR/Info.plist"
 
