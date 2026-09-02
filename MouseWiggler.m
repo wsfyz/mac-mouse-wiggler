@@ -198,12 +198,36 @@ typedef NS_ENUM(NSInteger, MouseWigglerMode) {
 }
 
 - (BOOL)ensureAccessibilityPermission {
-    NSDictionary *options = @{(__bridge NSString *)kAXTrustedCheckOptionPrompt: @YES};
+    // 只检查，不主动弹出系统权限提示（避免每次调用都触发系统弹窗）
+    NSDictionary *options = @{(__bridge NSString *)kAXTrustedCheckOptionPrompt: @NO};
     BOOL trusted = AXIsProcessTrustedWithOptions((__bridge CFDictionaryRef)options);
     if (!trusted) {
-        self.statusItem.button.toolTip = @"请在系统设置 → 隐私与安全性 → 辅助功能中允许鼠标自动小助手";
+        self.statusItem.button.title = @"🔒";
+        self.statusItem.button.toolTip = @"需要辅助功能权限，点击菜单查看指引";
+        [self promptOpenAccessibilitySettings];
     }
     return trusted;
+}
+
+- (void)promptOpenAccessibilitySettings {
+    // 用应用内 alert 引导用户，只在用户点击"打开设置"时才跳转，不会反复弹系统提示
+    static BOOL isShowing = NO;
+    if (isShowing) return;
+    isShowing = YES;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        NSAlert *alert = [[NSAlert alloc] init];
+        alert.messageText = @"需要辅助功能权限";
+        alert.informativeText = @"“鼠标自动小助手”需要辅助功能权限才能执行点击操作。\n\n请在“系统设置 → 隐私与安全性 → 辅助功能”中允许本应用，然后重新打开一次本应用。";
+        [alert addButtonWithTitle:@"打开系统设置"];
+        [alert addButtonWithTitle:@"稍后"];
+        [NSApp activateIgnoringOtherApps:YES];
+        NSModalResponse response = [alert runModal];
+        if (response == NSAlertFirstButtonReturn) {
+            NSURL *url = [NSURL URLWithString:@"x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"];
+            [[NSWorkspace sharedWorkspace] openURL:url];
+        }
+        isShowing = NO;
+    });
 }
 
 - (void)performClickCycle {
@@ -212,7 +236,13 @@ typedef NS_ENUM(NSInteger, MouseWigglerMode) {
         self.statusItem.button.toolTip = @"请先选择“3 秒后记录点击位置”";
         return;
     }
-    if (![self ensureAccessibilityPermission]) return;
+    // 静默检查权限，无权限时只更新状态提示，不弹窗（避免定时器反复触发弹窗）
+    NSDictionary *options = @{(__bridge NSString *)kAXTrustedCheckOptionPrompt: @NO};
+    if (!AXIsProcessTrustedWithOptions((__bridge CFDictionaryRef)options)) {
+        self.statusItem.button.title = @"🔒";
+        self.statusItem.button.toolTip = @"需要辅助功能权限，点击菜单栏图标查看指引";
+        return;
+    }
 
     CGPoint target = self.clickPoint;
     CGWarpMouseCursorPosition(target);
